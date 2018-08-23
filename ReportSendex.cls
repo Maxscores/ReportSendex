@@ -10,25 +10,27 @@
  */
 
 public without sharing class ReportSendex implements Queueable, Database.AllowsCallouts {
-    public List<String> reportIds;
-    public Map<String, List<String>> filtersByReportId;
-    public Map<String, String> namesByReportId;
+    public Set<Id> reportIds;
+    public Map<Id, List<String>> filtersByReportId;
+    public Map<Id, String> namesByReportId;
     public Messaging.SingleEmailMessage email;
     public String fileType;
 
-    public ReportSender(Map<String, List<String>> filtersByReportId, Messaging.SingleEmailMessage email, String fileType) {
+    public ReportSendex(Map<Id, List<String>> filtersByReportId, Messaging.SingleEmailMessage email, String fileType) {
         this.reportIds = filtersByReportId.keySet();
         // order of the filters is important, they need to be in the order shown in the report UI
         this.filtersByReportId = filtersByReportId;
         this.email = email;
         List<Report> reports = [
-            SELECT Id, DeveloperName
-            FROM Report
-            WHERE Id IN : filtersByReportId.keySet()
+                SELECT Id, DeveloperName
+                FROM Report
+                WHERE Id IN : filtersByReportId.keySet()
         ];
-        for (Report report : reports){
-            this.namesByReportId.put(report.Id, report.DeveloperName);
+        Map<Id, String> namesByReportId = new Map<Id, String>();
+        for (Report queriedReport : reports){
+            namesByReportId.put(queriedReport.Id, queriedReport.DeveloperName);
         }
+        this.namesByReportId = namesByReportId;
         this.fileType = fileType;
     }
 
@@ -37,12 +39,12 @@ public without sharing class ReportSendex implements Queueable, Database.AllowsC
         Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{email});
     }
 
-    private List<Messaging.EmailFileAttachment> getAllReportAttachments() {
+    public List<Messaging.EmailFileAttachment> getAllReportAttachments() {
         List<Messaging.EmailFileAttachment> emailFileAttachments = new List<Messaging.EmailFileAttachment>();
         for (String reportId : reportIds) {
-            String reportQuery = getReportQuery(reportId);
+            String reportQuery = getReportQuery((String) reportId);
             Blob reportContent;
-            if (!Test.isRunningTest) {
+            if (!Test.isRunningTest()) {
                 ApexPages.PageReference report = new ApexPages.PageReference(reportQuery);
                 reportContent = report.getContent();
             } else {
@@ -54,7 +56,7 @@ public without sharing class ReportSendex implements Queueable, Database.AllowsC
         return emailFileAttachments;
     }
 
-    private Messaging.EmailFileAttachment getReportAttachment(Blob reportContent, String reportName) {
+    public Messaging.EmailFileAttachment getReportAttachment(Blob reportContent, String reportName) {
         Messaging.EmailFileAttachment emailFileAttachment = new Messaging.EmailFileAttachment();
         String today = Datetime.now().format('MM-dd-YYYY');
         if (fileType == 'csv') {
@@ -68,7 +70,7 @@ public without sharing class ReportSendex implements Queueable, Database.AllowsC
         return emailFileAttachment;
     }
 
-    private String getReportQuery(String reportId) {
+    public String getReportQuery(String reportId) {
         String reportQuery = '/' + reportId + '?' + fileType + '=1';
         Integer i = 0;
         List<String> filters = filtersByReportId.get(reportId);
