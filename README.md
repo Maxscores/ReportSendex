@@ -9,7 +9,9 @@ Copy and Paste these into new files called ReportSendex.cls and ReportSendexTest
 Pass parameters to the below queued method call.
 
 **filtersByReportId** - filters must be in the order displayed in the Salesforce Report UI
+
 **email** - pass in your email object with recipients, subject, and body set [SF Docs](https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_classes_email_outbound_single.htm) this class will set the attachments and send the email.
+
 **fileType** - 'csv' or 'xls'. cvs reports are sent without groupings, just raw data rows
 
 ```
